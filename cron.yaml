@@ -1,0 +1,5 @@
+cron:
+- description: "Update Database"
+  url: /
+  schedule: every 15 minutes from 04:00 to 08:00
+  timezone: Europe/Zurich
