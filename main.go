@@ -64,7 +64,7 @@ func msm(t string) float64 {
 	return 0
 }
 
-// scrape reads the web page from "Groupe E" and extract relevant information
+// scrape reads the web page from "Groupe E" and extracts relevant information
 // for lake level.
 func scrape(r io.Reader) (Lakes, error) {
 	doc, err := goquery.NewDocumentFromReader(r)
