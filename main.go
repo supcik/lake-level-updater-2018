@@ -14,6 +14,7 @@
 
 // This program fetches the level of some lakes in the canton of Fribourg
 // and makes them available for simple web sites of for IoT.
+// It stores the lake levels in a Firebase Realtime Database
 
 package main
 
@@ -49,6 +50,8 @@ type Lake struct {
 // Lakes is the list of all fetched lakes.
 type Lakes map[string]Lake
 
+// msm parses a string representing a lake's level ang returns a float
+// note: "msm" means "mètres sur mer" (in french) which means "metres above sea level"
 func msm(t string) float64 {
 	re := regexp.MustCompile(`(\d+\.\d+).*msm`)
 	n := re.FindStringSubmatch(t)
@@ -61,6 +64,8 @@ func msm(t string) float64 {
 	return 0
 }
 
+// scrape reads the web page from "Groupe E" and extract relevant information
+// for lake level.
 func scrape(r io.Reader) (Lakes, error) {
 	doc, err := goquery.NewDocumentFromReader(r)
 	if err != nil {
@@ -106,11 +111,13 @@ func handle(w http.ResponseWriter, r *http.Request) {
 	resp, err := urlfetch.Client(ctx).Get(pageURL)
 	if err != nil {
 		log.Errorf(ctx, "Error fetching URL : %v", err)
+		http.Error(w, "Application Server Error", 500)
 		return
 	}
 	lakes, err := scrape(resp.Body)
 	if err != nil {
 		log.Errorf(ctx, "Error scraping data : %v", err)
+		http.Error(w, "Application Server Error", 500)
 		return
 	}
 
@@ -120,14 +127,14 @@ func handle(w http.ResponseWriter, r *http.Request) {
 	app, err := firebase.NewApp(ctx, fbConfig)
 	if err != nil {
 		log.Errorf(ctx, "Error creating firebase app: %v", err)
-		http.Error(w, "Error", 500)
+		http.Error(w, "Application Server Error", 500)
 		return
 	}
 
 	dbClient, err := app.Database(ctx)
 	if err != nil {
 		log.Errorf(ctx, "Error connecting to database : %v", err)
-		http.Error(w, "Error", 500)
+		http.Error(w, "Application Server Error", 500)
 		return
 	}
 
@@ -137,7 +144,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 		err = ref.Set(ctx, &l)
 		if err != nil {
 			log.Errorf(ctx, "Error writing datastore : %v", err)
-			http.Error(w, "Error", 500)
+			http.Error(w, "Application Server Error", 500)
 			return
 		}
 	}
